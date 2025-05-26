@@ -1,0 +1,245 @@
+{
+	"info": {
+		"_postman_id": "ca52e290-4a82-40cd-9bea-26952da2a0a0",
+		"name": "postgres",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31253642",
+		"_collection_link": "https://gold-water-52727.postman.co/workspace/My-Workspace~9ade86e4-71b9-490f-8639-a7e33e4b8b5a/collection/31253642-ca52e290-4a82-40cd-9bea-26952da2a0a0?action=share&source=collection_link&creator=31253642"
+	},
+	"item": [
+		{
+			"name": "Todo lists",
+			"item": [
+				{
+					"name": "Get all todo lists",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/todo-lists",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-lists"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post new list",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/todo-lists",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-lists"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete list",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/todo-lists/5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-lists",
+								"5"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Todo items",
+			"item": [
+				{
+					"name": "Get all todos",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/todo-items",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-items"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post new todo",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"listId\": 1,\n    \"title\": \"Complete project documentation\",\n    \"description\": \"Write API documentation and update README\",\n    \"dueDate\": \"2024-12-31\",\n    \"priority\": \"high\",\n    \"metadata\": {\n        \"project\": \"API Documentation\",\n        \"assignee\": \"John Doe\",\n        \"estimatedHours\": 4,\n        \"dependencies\": [\n            \"API Implementation\",\n            \"Database Setup\"\n        ]\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/todo-items",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-items"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update todo",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"listId\": 1,\n    \"title\": \"Complete project documentation\",\n    \"description\": \"Write API documentation and update README\",\n    \"dueDate\": \"2024-12-31\",\n    \"priority\": \"high\",\n    \"metadata\": {\n        \"project\": \"API Documentation\",\n        \"assignee\": \"John Doe\",\n        \"estimatedHours\": 4,\n        \"dependencies\": [\n            \"API Implementation\",\n            \"Database Setup\"\n        ]\n    }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/todo-items?id=12",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-items"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "12"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete todo",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/todo-items/12",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"todo-items",
+								"12"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tags",
+			"item": [
+				{
+					"name": "Get all tags",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/tags",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"tags"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post new tag",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Upcoming\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/tags",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"tags"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

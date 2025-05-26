@@ -4,7 +4,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { AppDataSource } from './config/database';
 import todoRoutes from './routes/todoRoutes';
 
 // Load environment variables
@@ -12,15 +11,6 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-
-// Initialize database connection
-AppDataSource.initialize()
-  .then(() => {
-    console.log('Database connection established');
-  })
-  .catch((error) => {
-    console.error('Error during database initialization:', error);
-  });
 
 // Middleware
 app.use(cors());
@@ -30,7 +20,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/todos', todoRoutes);
+app.use('/api', todoRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
