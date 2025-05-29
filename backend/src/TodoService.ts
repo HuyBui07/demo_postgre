@@ -1,17 +1,17 @@
-import { Pool } from 'pg';
+import { Pool, PoolConfig } from 'pg';
 
 interface TodoItem {
   id: number;
   list_id: number;
   title: string;
-  description: string | null;
-  due_date: Date | null;
+  description?: string | null;
+  due_date?: string | null;    // MODIFIED: Changed from Date to string
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   metadata: Record<string, any>;
-  full_description: string;
   created_at: Date;
   updated_at: Date;
+  full_description?: string | null;
 }
 
 interface TodoList {
@@ -33,16 +33,24 @@ export class TodoService {
     port: number;
     database: string;
     user: string;
-    password: string;
+    password?: string;
   }) {
-    this.pool = new Pool(connectionConfig);
+    console.log('Connecting to Postgres with:', {
+      host: connectionConfig.host,
+      port: connectionConfig.port,
+      database: connectionConfig.database,
+      user: connectionConfig.user,
+      // Password is intentionally not logged
+    });
+    this.pool = new Pool(connectionConfig as PoolConfig);
   }
 
   // TodoList operations
   async createList(title: string): Promise<TodoList> {
-    const result = await this.pool.query('INSERT INTO todo_lists (title) VALUES ($1) RETURNING *', [
-      title,
-    ]);
+    const result = await this.pool.query(
+      'INSERT INTO todo_lists (title) VALUES ($1) RETURNING *',
+      [title],
+    );
     return result.rows[0];
   }
 
@@ -61,7 +69,7 @@ export class TodoService {
     listId: number,
     title: string,
     description?: string,
-    dueDate?: Date,
+    dueDate?: string, // MODIFIED: Changed from Date to string
     priority: 'low' | 'medium' | 'high' | 'urgent' = 'low',
     metadata: Record<string, any> = {},
   ): Promise<TodoItem> {
@@ -70,6 +78,7 @@ export class TodoService {
        (list_id, title, description, due_date, priority, metadata) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
+      // dueDate is now a 'YYYY-MM-DD' string or undefined/null, which PostgreSQL handles for DATE columns
       [listId, title, description, dueDate, priority, metadata],
     );
     return result.rows[0];
@@ -81,25 +90,23 @@ export class TodoService {
       : 'SELECT * FROM todo_items ORDER BY created_at DESC';
     const params = listId ? [listId] : [];
     const result = await this.pool.query(query, params);
-    return result.rows;
+    return result.rows; // due_date will now be a string 'YYYY-MM-DD'
   }
 
-  async updateTodoItem(
-    id: number,
-    updates: Partial<{
-      title: string;
-      description: string;
-      due_date: Date;
-      status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-      priority: 'low' | 'medium' | 'high' | 'urgent';
-      metadata: Record<string, any>;
-    }>,
-  ): Promise<TodoItem | null> {
-    const setClause = Object.keys(updates)
-      .map((key, index) => `${key} = $${index + 2}`)
-      .join(', ');
+  async updateTodoItem(id: number, updates: Partial<Omit<TodoItem, 'id' | 'list_id' | 'created_at' | 'updated_at' | 'full_description'>>): Promise<TodoItem | null> {
+    const validUpdateKeys = Object.keys(updates)
+      .filter(key => updates[key as keyof typeof updates] !== undefined);
 
-    const values = Object.values(updates);
+    if (validUpdateKeys.length === 0) {
+      const currentItem = await this.pool.query('SELECT * FROM todo_items WHERE id = $1', [id]);
+      return currentItem.rows[0] || null;
+    }
+
+    const setClause = validUpdateKeys
+      .map((key, index) => `"${key}" = $${index + 2}`) // "due_date" will be handled as string
+      .join(', ');
+    const values = validUpdateKeys.map(key => updates[key as keyof typeof updates]);
+
     const result = await this.pool.query(
       `UPDATE todo_items 
        SET ${setClause}, updated_at = NOW() 
@@ -107,7 +114,7 @@ export class TodoService {
        RETURNING *`,
       [id, ...values],
     );
-    return result.rows[0] || null;
+    return result.rows[0] || null; // due_date will now be a string 'YYYY-MM-DD'
   }
 
   async deleteTodoItem(id: number): Promise<boolean> {
@@ -117,7 +124,10 @@ export class TodoService {
 
   // Tag operations
   async createTag(name: string): Promise<Tag> {
-    const result = await this.pool.query('INSERT INTO tags (name) VALUES ($1) RETURNING *', [name]);
+    const result = await this.pool.query(
+      'INSERT INTO tags (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+      [name],
+    );
     return result.rows[0];
   }
 
@@ -127,14 +137,11 @@ export class TodoService {
   }
 
   async addTagToTodoItem(todoItemId: number, tagName: string): Promise<void> {
-    // First ensure the tag exists
     const tagResult = await this.pool.query(
       'INSERT INTO tags (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
       [tagName],
     );
     const tagId = tagResult.rows[0].id;
-
-    // Then create the association
     await this.pool.query(
       'INSERT INTO todo_item_tags (item_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [todoItemId, tagId],
@@ -142,23 +149,25 @@ export class TodoService {
   }
 
   async removeTagFromTodoItem(todoItemId: number, tagName: string): Promise<void> {
-    await this.pool.query(
+    const result = await this.pool.query(
       `DELETE FROM todo_item_tags 
        WHERE item_id = $1 
        AND tag_id = (SELECT id FROM tags WHERE name = $2)`,
       [todoItemId, tagName],
     );
+    if (result.rowCount === 0) {
+      console.warn(`Tag '${tagName}' might not have been associated with item ${todoItemId}, or tag does not exist.`);
+    }
   }
 
-  async getTodoItemsByTag(tagName: string): Promise<TodoItem[]> {
+  async getTodoItemTags(todoItemId: number): Promise<Tag[]> {
     const result = await this.pool.query(
-      `SELECT ti.* 
-       FROM todo_items ti
-       JOIN todo_item_tags tit ON ti.id = tit.item_id
-       JOIN tags t ON tit.tag_id = t.id
-       WHERE t.name = $1
-       ORDER BY ti.created_at DESC`,
-      [tagName],
+      `SELECT t.* 
+       FROM tags t
+       JOIN todo_item_tags tit ON t.id = tit.tag_id
+       WHERE tit.item_id = $1
+       ORDER BY t.name`,
+      [todoItemId],
     );
     return result.rows;
   }
@@ -177,7 +186,7 @@ export class TodoService {
   }
 
   async getTodoItemsByStatus(
-    status: 'pending' | 'in_progress' | 'completed' | 'cancelled',
+    status: 'pending' | 'in_progress' | 'completed' | 'cancelled', // Inline type
   ): Promise<TodoItem[]> {
     const result = await this.pool.query(
       'SELECT * FROM todo_items WHERE status = $1 ORDER BY created_at DESC',
@@ -192,6 +201,19 @@ export class TodoService {
     const result = await this.pool.query(
       'SELECT * FROM todo_items WHERE priority = $1 ORDER BY created_at DESC',
       [priority],
+    );
+    return result.rows;
+  }
+
+  async getTodoItemsByTag(tagName: string): Promise<TodoItem[]> {
+    const result = await this.pool.query(
+      `SELECT ti.* 
+       FROM todo_items ti
+       JOIN todo_item_tags tit ON ti.id = tit.item_id
+       JOIN tags t ON tit.tag_id = t.id
+       WHERE t.name = $1
+       ORDER BY ti.created_at DESC`,
+      [tagName],
     );
     return result.rows;
   }
